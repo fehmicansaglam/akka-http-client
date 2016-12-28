@@ -7,7 +7,9 @@ import spray.json.DefaultJsonProtocol._
 import spray.json._
 
 case class Repo(id: Long, name: String)
+case class Post(id: Option[Int] = None, title: String, body: String, userId: Int)
 implicit val repoFormat = jsonFormat2(Repo)
+implicit val postFormat = jsonFormat4(Post)
 
 get("https://api.github.com/users/fehmicansaglam/repos")
   .acceptJson
