@@ -16,4 +16,15 @@ get("https://api.github.com/users/fehmicansaglam/repos")
     assert(status == StatusCodes.OK)
     assert(actual.exists(_.name == "akka-http-client"))
   }
+  
+val data = Post(title = "foo", body = "bar", userId = 1)
+val expected = data.copy(id = Some(101))
+
+post("http://jsonplaceholder.typicode.com/posts")
+  .bodyAsJson(data.toJson.compactPrint)
+  .runMap { response =>
+    val actual = response.body.utf8String.parseJson.convertTo[Post]
+    assert(response.status == StatusCodes.Created)
+    assert(actual == expected)
+  }  
 ```
