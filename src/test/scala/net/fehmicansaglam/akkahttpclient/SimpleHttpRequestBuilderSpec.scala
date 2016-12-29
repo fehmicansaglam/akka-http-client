@@ -38,11 +38,11 @@ class SimpleHttpRequestBuilderSpec extends AsyncFlatSpec with Matchers {
   it should "get /repos as json" in {
     get("https://api.github.com/users/fehmicansaglam/repos")
       .acceptJson
-      .runMap { case r@SimpleHttpResponse(status, _, _, _, _) =>
-        val actual = r.bodyAsString.parseJson.convertTo[List[Repo]]
-        assert(status == StatusCodes.OK)
-        assert(actual.exists(_.name == "akka-http-client"))
-      }
+      .run.map { case r@SimpleHttpResponse(status, _, _, _, _) =>
+      val actual = r.bodyAsString.parseJson.convertTo[List[Repo]]
+      assert(status == StatusCodes.OK)
+      assert(actual.exists(_.name == "akka-http-client"))
+    }
   }
 
   it should "get /comments?postId=2 as json" in {
@@ -55,11 +55,11 @@ class SimpleHttpRequestBuilderSpec extends AsyncFlatSpec with Matchers {
     get("http://jsonplaceholder.typicode.com/comments")
       .params("postId" -> "2")
       .acceptJson
-      .runMap { case SimpleHttpResponse(status, body, _, _, _) =>
-        val actual = body.utf8String.parseJson.convertTo[List[Comment]].head
-        assert(status == StatusCodes.OK)
-        assert(actual == expected)
-      }
+      .run.map { case SimpleHttpResponse(status, body, _, _, _) =>
+      val actual = body.utf8String.parseJson.convertTo[List[Comment]].head
+      assert(status == StatusCodes.OK)
+      assert(actual == expected)
+    }
   }
 
   it should "post json to /posts" in {
@@ -68,11 +68,11 @@ class SimpleHttpRequestBuilderSpec extends AsyncFlatSpec with Matchers {
 
     post("http://jsonplaceholder.typicode.com/posts")
       .bodyAsJson(data.toJson.compactPrint)
-      .runMap { response =>
-        val actual = response.body.utf8String.parseJson.convertTo[Post]
-        assert(response.status == StatusCodes.Created)
-        assert(actual == expected)
-      }
+      .run.map { response =>
+      val actual = response.body.utf8String.parseJson.convertTo[Post]
+      assert(response.status == StatusCodes.Created)
+      assert(actual == expected)
+    }
   }
 
   it should "put json to /posts/1" in {
@@ -81,16 +81,16 @@ class SimpleHttpRequestBuilderSpec extends AsyncFlatSpec with Matchers {
 
     put("http://jsonplaceholder.typicode.com/posts/1")
       .bodyAsJson(data.toJson.compactPrint)
-      .runMap { response =>
-        val actual = response.body.utf8String.parseJson.convertTo[Post]
-        assert(response.status == StatusCodes.OK)
-        assert(actual == expected)
-      }
+      .run.map { response =>
+      val actual = response.body.utf8String.parseJson.convertTo[Post]
+      assert(response.status == StatusCodes.OK)
+      assert(actual == expected)
+    }
   }
 
   it should "delete /posts/1" in {
     delete("http://jsonplaceholder.typicode.com/posts/1")
-      .runMap { response =>
+      .run.map { response =>
       assert(response.status == StatusCodes.OK)
     }
   }

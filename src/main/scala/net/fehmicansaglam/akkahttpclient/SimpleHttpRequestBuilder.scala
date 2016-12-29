@@ -5,12 +5,16 @@ import java.nio.file.Path
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.HttpExt
+import akka.http.scaladsl.model.StatusCodes.ServerError
+import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.Accept
-import akka.http.scaladsl.model.{HttpEntity, _}
 import akka.stream.Materializer
 import akka.util.ByteString
 
+import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.Try
+import scala.util.control.NonFatal
 
 case class SimpleHttpResponse(status: StatusCode,
                               body: ByteString,
@@ -20,12 +24,17 @@ case class SimpleHttpResponse(status: StatusCode,
   def bodyAsString: String = body.decodeString(charset)
 }
 
+case class UnexpectedResponse(response: SimpleHttpResponse) extends RuntimeException(response.status.toString())
+
 case class SimpleHttpRequestBuilder(request: HttpRequest) {
 
   def params(kvs: (String, String)*): SimpleHttpRequestBuilder = {
     val query = kvs.foldLeft(request.uri.query())((query, curr) => curr +: query)
     SimpleHttpRequestBuilder(request.withUri(request.uri.withQuery(query)))
   }
+
+  def accept(mediaRanges: MediaRange*): SimpleHttpRequestBuilder =
+    SimpleHttpRequestBuilder(request.addHeader(Accept(mediaRanges: _*)))
 
   def acceptJson: SimpleHttpRequestBuilder =
     SimpleHttpRequestBuilder(request.addHeader(Accept(MediaRange(MediaTypes.`application/json`))))
@@ -51,10 +60,10 @@ case class SimpleHttpRequestBuilder(request: HttpRequest) {
   def bodyFromFile(contentType: ContentType, file: Path, chunkSize: Int = -1): SimpleHttpRequestBuilder =
     SimpleHttpRequestBuilder(request.withEntity(HttpEntity.fromPath(contentType, file, chunkSize)))
 
-  def run(implicit system: ActorSystem,
-          mat: Materializer,
-          http: HttpExt,
-          ec: ExecutionContext): Future[SimpleHttpResponse] = {
+  def run()(implicit system: ActorSystem,
+            mat: Materializer,
+            http: HttpExt,
+            ec: ExecutionContext): Future[SimpleHttpResponse] = {
     for {
       response <- http.singleRequest(request)
       contentType = response.entity.contentType
@@ -63,9 +72,44 @@ case class SimpleHttpRequestBuilder(request: HttpRequest) {
     } yield SimpleHttpResponse(response.status, body, response.headers, contentType, charset)
   }
 
-  def runMap[T](f: SimpleHttpResponse => T)
-               (implicit system: ActorSystem, mat: Materializer, http: HttpExt, ec: ExecutionContext): Future[T] = {
-    run.map(f)
+  def runTry(failWhen: SimpleHttpResponse => Boolean = _.status.isFailure())
+            (implicit system: ActorSystem,
+             mat: Materializer,
+             http: HttpExt,
+             ec: ExecutionContext): Future[Try[SimpleHttpResponse]] = {
+    run().map {
+      case response if failWhen(response) => util.Failure(UnexpectedResponse(response))
+      case response => util.Success(response)
+    }.recover {
+      case NonFatal(cause) => util.Failure(cause)
+    }
+  }
+
+  def retryDirectly(max: Int = 5,
+                    failWhen: SimpleHttpResponse => Boolean = _.status.isInstanceOf[ServerError])
+                   (implicit system: ActorSystem,
+                    mat: Materializer,
+                    http: HttpExt,
+                    ec: ExecutionContext): Future[Try[SimpleHttpResponse]] = {
+    retry.Directly(max) { () => runTry(failWhen) }
+  }
+
+  def retryPause(max: Int = 5, delay: FiniteDuration = 500.milliseconds,
+                 failWhen: SimpleHttpResponse => Boolean = _.status.isInstanceOf[ServerError])
+                (implicit system: ActorSystem,
+                 mat: Materializer,
+                 http: HttpExt,
+                 ec: ExecutionContext): Future[Try[SimpleHttpResponse]] = {
+    retry.Pause(max, delay) { () => runTry(failWhen) }
+  }
+
+  def retryBackoff(max: Int = 5, delay: FiniteDuration = 500.milliseconds, base: Int = 2,
+                   failWhen: SimpleHttpResponse => Boolean = _.status.isInstanceOf[ServerError])
+                  (implicit system: ActorSystem,
+                   mat: Materializer,
+                   http: HttpExt,
+                   ec: ExecutionContext): Future[Try[SimpleHttpResponse]] = {
+    retry.Backoff(max, delay, base) { () => runTry(failWhen) }
   }
 
 }
