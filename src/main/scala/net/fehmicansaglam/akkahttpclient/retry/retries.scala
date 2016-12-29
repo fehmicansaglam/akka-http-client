@@ -25,7 +25,10 @@ object SleepFuture {
   def apply[T](delay: FiniteDuration)(todo: => T)
               (implicit system: ActorSystem, ec: ExecutionContext): Future[T] = {
     val promise = scala.concurrent.Promise[T]()
-    system.scheduler.scheduleOnce(delay)(promise.complete(Try(todo)))
+    system.scheduler.scheduleOnce(delay) {
+      promise.complete(Try(todo))
+      ()
+    }
     promise.future
   }
 }
@@ -66,7 +69,7 @@ object Pause extends CountingRetry {
       success,
       max => SleepFuture(delay) {
         Pause(max, delay)(promise)
-      }.flatten)
+      }.flatMap(identity))
   }
 }
 
@@ -80,6 +83,6 @@ object Backoff extends CountingRetry {
       success,
       count => SleepFuture(delay) {
         Backoff(count, Duration(delay.length * base, delay.unit), base)(promise)
-      }.flatten)
+      }.flatMap(identity))
   }
 }
