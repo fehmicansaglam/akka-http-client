@@ -1,6 +1,21 @@
 # akka-http-client
 Simple Akka HTTP Client DSL for Scala
 
+## Quick Start
+
+### Setting up dependencies
+
+If you want to be on the bleeding edge using snapshots, latest snapshot release is **10.0_0-SNAPSHOT**. Add the following repository and dependency:
+```scala
+resolvers += "Sonatype Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/"
+
+libraryDependencies ++= Seq(
+  "net.fehmicansaglam" %% "akka-http-client" % "10.0_0-SNAPSHOT"
+)
+```
+
+## Examples
+
 ```scala
 import net.fehmicansaglam.akkahttpclient.SimpleHttpRequestBuilder._
 import spray.json.DefaultJsonProtocol._
@@ -31,7 +46,7 @@ post("http://jsonplaceholder.typicode.com/posts")
   }  
 ```
 
-# Retry
+## Retry strategies
 
 ```scala
 delete("http://jsonplaceholder.typicode.com/posts/1")
