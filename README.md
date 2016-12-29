@@ -53,3 +53,10 @@ delete("http://jsonplaceholder.typicode.com/posts/1")
   .retryBackoff(max = 4)
   
 ```
+
+## Contributions
+akka-http-client needs your help. Good ways to contribute include:
+
+* Raising bugs and feature requests
+* Fixing bugs
+* Adding to the documentation
