@@ -60,10 +60,7 @@ case class SimpleHttpRequestBuilder(request: HttpRequest) {
   def bodyFromFile(contentType: ContentType, file: Path, chunkSize: Int = -1): SimpleHttpRequestBuilder =
     SimpleHttpRequestBuilder(request.withEntity(HttpEntity.fromPath(contentType, file, chunkSize)))
 
-  def run()(implicit system: ActorSystem,
-            mat: Materializer,
-            http: HttpExt,
-            ec: ExecutionContext): Future[SimpleHttpResponse] = {
+  def run()(implicit mat: Materializer, http: HttpExt, ec: ExecutionContext): Future[SimpleHttpResponse] = {
     for {
       response <- http.singleRequest(request)
       contentType = response.entity.contentType
@@ -73,10 +70,7 @@ case class SimpleHttpRequestBuilder(request: HttpRequest) {
   }
 
   def runTry(failWhen: SimpleHttpResponse => Boolean = _.status.isFailure())
-            (implicit system: ActorSystem,
-             mat: Materializer,
-             http: HttpExt,
-             ec: ExecutionContext): Future[Try[SimpleHttpResponse]] = {
+            (implicit mat: Materializer, http: HttpExt, ec: ExecutionContext): Future[Try[SimpleHttpResponse]] = {
     run().map {
       case response if failWhen(response) => util.Failure(UnexpectedResponse(response))
       case response => util.Success(response)
