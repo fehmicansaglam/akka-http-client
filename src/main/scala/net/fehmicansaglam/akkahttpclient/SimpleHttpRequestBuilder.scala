@@ -7,7 +7,7 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.HttpExt
 import akka.http.scaladsl.model.StatusCodes.ServerError
 import akka.http.scaladsl.model._
-import akka.http.scaladsl.model.headers.Accept
+import akka.http.scaladsl.model.headers.{Accept, RawHeader}
 import akka.stream.Materializer
 import akka.util.ByteString
 
@@ -31,6 +31,14 @@ case class SimpleHttpRequestBuilder(request: HttpRequest) {
   def params(kvs: (String, String)*): SimpleHttpRequestBuilder = {
     val query = kvs.foldLeft(request.uri.query())((query, curr) => curr +: query)
     SimpleHttpRequestBuilder(request.withUri(request.uri.withQuery(query)))
+  }
+
+  def headers(kvs: (String, String)*): SimpleHttpRequestBuilder = {
+    val customHeaders = kvs.map {
+      case (key, value) => RawHeader(key, value).asInstanceOf[HttpHeader]
+    }
+
+    SimpleHttpRequestBuilder(request.withHeaders(customHeaders.to[collection.immutable.Seq]))
   }
 
   def accept(mediaRanges: MediaRange*): SimpleHttpRequestBuilder =
