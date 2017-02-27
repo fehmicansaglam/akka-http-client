@@ -27,7 +27,7 @@ scalacOptions := Seq(
 )
 
 libraryDependencies ++= {
-  val akkaHttpCoreV = "10.0.1"
+  val akkaHttpCoreV = "10.0.4"
   val sprayJsonV = "1.3.2"
   val scalaTestV = "3.0.1"
   Seq(
