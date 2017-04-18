@@ -7,7 +7,7 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.HttpExt
 import akka.http.scaladsl.model.StatusCodes.ServerError
 import akka.http.scaladsl.model._
-import akka.http.scaladsl.model.headers.Accept
+import akka.http.scaladsl.model.headers.{Accept, RawHeader}
 import akka.stream.Materializer
 import akka.util.ByteString
 
@@ -27,6 +27,9 @@ case class SimpleHttpResponse(status: StatusCode,
 case class UnexpectedResponse(response: SimpleHttpResponse) extends RuntimeException(response.status.toString())
 
 case class SimpleHttpRequestBuilder(request: HttpRequest) {
+  def headers(kvs: (String, String)*): SimpleHttpRequestBuilder = {
+    SimpleHttpRequestBuilder(request.mapHeaders(_ ++ kvs.map((RawHeader.apply _).tupled)))
+  }
 
   def params(kvs: (String, String)*): SimpleHttpRequestBuilder = {
     val query = kvs.foldLeft(request.uri.query())((query, curr) => curr +: query)
@@ -118,6 +121,12 @@ object SimpleHttpRequestBuilder {
 
   def post(uri: String): SimpleHttpRequestBuilder =
     SimpleHttpRequestBuilder(HttpRequest(method = HttpMethods.POST, uri = uri))
+
+  def post(uri: String, fields: Map[String, String]): SimpleHttpRequestBuilder =
+    SimpleHttpRequestBuilder(HttpRequest(method = HttpMethods.POST, uri = uri, entity = FormData(fields).toEntity))
+
+  def post(uri: String, fields: (String, String)*): SimpleHttpRequestBuilder =
+    SimpleHttpRequestBuilder(HttpRequest(method = HttpMethods.POST, uri = uri, entity = FormData(fields :_*).toEntity))
 
   def put(uri: String): SimpleHttpRequestBuilder =
     SimpleHttpRequestBuilder(HttpRequest(method = HttpMethods.PUT, uri = uri))
