@@ -63,6 +63,12 @@ case class SimpleHttpRequestBuilder(request: HttpRequest) {
   def bodyFromFile(contentType: ContentType, file: Path, chunkSize: Int = -1): SimpleHttpRequestBuilder =
     SimpleHttpRequestBuilder(request.withEntity(HttpEntity.fromPath(contentType, file, chunkSize)))
 
+  def bodyAsForm(fields: Map[String, String]): SimpleHttpRequestBuilder =
+    SimpleHttpRequestBuilder(request.withEntity(FormData(fields).toEntity))
+
+  def bodyAsForm(fields: (String, String)*): SimpleHttpRequestBuilder =
+    SimpleHttpRequestBuilder(request.withEntity(FormData(fields :_*).toEntity))
+
   def run()(implicit mat: Materializer, http: HttpExt, ec: ExecutionContext): Future[SimpleHttpResponse] = {
     for {
       response <- http.singleRequest(request)
@@ -121,12 +127,6 @@ object SimpleHttpRequestBuilder {
 
   def post(uri: String): SimpleHttpRequestBuilder =
     SimpleHttpRequestBuilder(HttpRequest(method = HttpMethods.POST, uri = uri))
-
-  def post(uri: String, fields: Map[String, String]): SimpleHttpRequestBuilder =
-    SimpleHttpRequestBuilder(HttpRequest(method = HttpMethods.POST, uri = uri, entity = FormData(fields).toEntity))
-
-  def post(uri: String, fields: (String, String)*): SimpleHttpRequestBuilder =
-    SimpleHttpRequestBuilder(HttpRequest(method = HttpMethods.POST, uri = uri, entity = FormData(fields :_*).toEntity))
 
   def put(uri: String): SimpleHttpRequestBuilder =
     SimpleHttpRequestBuilder(HttpRequest(method = HttpMethods.PUT, uri = uri))
