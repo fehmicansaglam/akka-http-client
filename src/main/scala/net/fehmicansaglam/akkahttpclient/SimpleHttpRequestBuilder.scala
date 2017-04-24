@@ -36,6 +36,14 @@ case class SimpleHttpRequestBuilder(request: HttpRequest) {
     SimpleHttpRequestBuilder(request.withUri(request.uri.withQuery(query)))
   }
 
+  def headers(kvs: (String, String)*): SimpleHttpRequestBuilder = {
+    val customHeaders = kvs.map {
+      case (key, value) => RawHeader(key, value).asInstanceOf[HttpHeader]
+    }
+
+    SimpleHttpRequestBuilder(request.withHeaders(customHeaders.to[collection.immutable.Seq]))
+  }
+
   def accept(mediaRanges: MediaRange*): SimpleHttpRequestBuilder =
     SimpleHttpRequestBuilder(request.addHeader(Accept(mediaRanges: _*)))
 
